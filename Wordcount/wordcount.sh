@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # get the files to scan
-FILES="PASTA_Documentation.tex
-PASTA_titlepage.tex"
+INPUT_FILE="file.list"
+FILES=$(tr '\n' ' ' < $INPUT_FILE)
 
 # count with wordcount
 WC_BIN="/usr/bin/wc"
