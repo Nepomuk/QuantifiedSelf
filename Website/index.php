@@ -3,61 +3,12 @@ date_default_timezone_set('Europe/Berlin');
 $yesterday = strtotime("yesterday");
 $readableYesterday = date("d. M. Y", $yesterday);
 
-require_once('config.inc.php');
+require_once('inc.config.php');
+require_once('inc.mysqlconnect.php');
 
-require_once('computerinput.inc.php');
-
-class MyDB extends SQLite3
-{
-	function __construct()
-	{
-		$this->open('data/fbData.db');
-	}
-}
-
-$db = new MyDB();
-if(!$db){
-	echo $db->lastErrorMsg();
-} else {
-		// echo "Opened database successfully\n";
-}
-
-/* the following 7 lines still need to be merged into the code following after that. it's redundant at the moment. */ 
-$ret = $db->query("SELECT * from fitbitdata where date = " . $yesterday );
-$lastSteps = $lastFloors = "No";
-while($row = $ret->fetchArray(SQLITE3_ASSOC) ){
-	$lastDate = $row['date'];
-	$lastSteps =  $row['steps'];
-	$lastFloors = $row['floors'];
-}
-
-$today = strtotime('today');
-$dates = array();
-$queryString = "SELECT * from fitbitdata where ";
-$nOfHistoryDays = 10;
-for ($i = 1; $i < $nOfHistoryDays; $i++) {
-	$currentDate = strtotime('-' . $i . ' day', $today);
-	array_push($dates, $currentDate);
-	$queryString .= "(date = " . $currentDate . ") ";
-	if ($i < ($nOfHistoryDays - 1 )) $queryString .= "OR ";
-}
-
-$historySteps = $historyFloors = array();
-$historyQuery = $db->query($queryString);
-while ($row = $historyQuery->fetchArray()) {
-	$historySteps[$row['date']] = $row['steps'];
-	$historyFloors[$row['date']] = $row['floors'];
-}
-
-function convDate($d) {
-	return date("d.m", $d);
-}
-$jsonHistoryDates = json_encode(array_map("convDate", array_keys($historyFloors)));
-$jsonHistorySteps = json_encode(array_values($historySteps));
-$jsonHistoryFloors = json_encode(array_values($historyFloors));
-
-$db->close();
-
+require_once('inc.computerinput.php');
+require_once('inc.lastfm.php');
+require_once('inc.fitbit.php');
 
 /* Stuff for coloring the numbers */
 function getColor($value, $limitvalue, $color)
@@ -114,6 +65,7 @@ if (getGlow($lastFloors, $goalFloors)) $glowFloors = "text-shadow: 0px 0px 20px;
 	<style type="text/css">
 		html {
 			font-family: "Ubuntu";
+			color: #333;
 		}
 		#header, #content {
 			margin: auto;
@@ -128,6 +80,12 @@ if (getGlow($lastFloors, $goalFloors)) $glowFloors = "text-shadow: 0px 0px 20px;
 			margin-top: 10px;
 			bottom: inherit;
 		}
+		ul.quants {
+			padding: 0;
+		}
+		ul.quants li {
+			list-style: none;
+		}
 		span.number, h1 {
 			font-family: 'Average Sans', sans-serif;
 		}
@@ -141,18 +99,18 @@ if (getGlow($lastFloors, $goalFloors)) $glowFloors = "text-shadow: 0px 0px 20px;
 		h1:hover {
 			opacity: 1;
 		}
-		div.steps {
+		ul.quants .steps {
 			<?php if ($colorSteps) echo "color: " . $colorSteps . ";"; ?>
 			<?php if ($glowSteps) echo $glowSteps; ?>
 		}
-		div.stairs {
+		ul.quants .stairs {
 			<?php if ($colorFloors) echo "color: " . $colorFloors . ";"; ?>
 			<?php if ($glowFloors) echo $glowFloors; ?>
 		}
-		div.keypresses, div.clicks {
+		ul.quants .keypresses, ul.quants .clicks, ul.quants .plays {
 			color: #3C5079;
 		}
-		.number:before {
+		ul.quants .number:before {
 			font-family: "andiliveregular";
 			position: relative;
 			font-size: 0.7em;
@@ -164,22 +122,27 @@ if (getGlow($lastFloors, $goalFloors)) $glowFloors = "text-shadow: 0px 0px 20px;
 			-webkit-font-smoothing: antialiased;
 			-moz-osx-font-smoothing: grayscale;
 		}
-		.number:hover:before {
+		ul.quants .number:hover:before {
 			opacity: 0.8;
 		}
-		.icon-footprints:before {
+		ul.quants .icon-footprints:before {
 			content: "s";
 		}
-		.icon-stairs:before {
+		ul.quants .icon-stairs:before {
 			content: "a";
 		}
-		.icon-clicks:before {
+		ul.quants .icon-clicks:before {
 			content: "p";
 			padding-right: 4px;
 		}
-		.number.icon-keypresses:before {
-			font-family: FontAwesome;
+		ul.quants .number.icon-keypresses:before {
+			font-family: "FontAwesome";
 			content: "\f11c";
+			bottom: 3px;
+		}
+		ul.quants .number.icon-plays:before {
+			font-family: "FontAwesome";
+			content: "\f001";
 			bottom: 3px;
 		}
 		.chart {
@@ -197,7 +160,7 @@ if (getGlow($lastFloors, $goalFloors)) $glowFloors = "text-shadow: 0px 0px 20px;
 			bottom: 4px;
 			padding-right: 4px;
 		}
-		canvas#graph {
+		#graph {
 /* 			overflow: hidden; */
 			display: none;
 			margin-bottom: 10px;
@@ -221,29 +184,35 @@ if (getGlow($lastFloors, $goalFloors)) $glowFloors = "text-shadow: 0px 0px 20px;
 		</div>
 	</div>
 	<div id="content">
-		<div class="steps">
-			<span class="number icon-footprints" title="<?php echo $lastSteps ?> steps walked yesterday."><?php echo $lastSteps ?></span>
-		</div>
-		<div class="stairs">
-			<span class="number icon-stairs" title="<?php echo $lastFloors ?> floors climbed yesterday."><?php echo $lastFloors ?></span>
-		</div>
-		<div class="keypresses">
-			<span class="number icon-keypresses" title="<?php echo $lastKeys ?> keys pressed yesterday."><?php echo $lastKeys ?></span>
-		</div>
-		<div class="clicks">
-			<span class="number icon-clicks" title="<?php echo $lastClicks ?> clicks with my mouse yesterday."><?php echo $lastClicks ?></span>
-		</div>
+		<ul class="quants">
+			<li class="steps">
+				<span class="number icon-footprints" title="<?php echo $lastSteps ?> steps walked yesterday."><?php echo $lastSteps ?></span>
+			</li>
+			<li class="stairs">
+				<span class="number icon-stairs" title="<?php echo $lastFloors ?> floors climbed yesterday."><?php echo $lastFloors ?></span>
+			</li>
+			<li class="keypresses">
+				<span class="number icon-keypresses" title="<?php echo $lastKeys ?> keys pressed yesterday."><?php echo $lastKeys ?></span>
+			</li>
+			<li class="clicks">
+				<span class="number icon-clicks" title="<?php echo $lastClicks ?> clicks with my mouse yesterday."><?php echo $lastClicks ?></span>
+			</li>
+			<li class="plays">
+				<span class="number icon-plays" title="<?php echo $yesterdaysPlays ?> songs listened to yesterday."><?php echo $yesterdaysPlays ?></span>
+			</li>
+		</ul>
 		<div class="chart">
 			<h1 id="history"><i class="fa fa-toggle-down"></i>History (Steps)</h1>
-			 <canvas id="graph" height="250" width="600"></canvas>
+			 <div id="graph" style="min-width: 600px; height: 250px;"></div>
 		</div>
 		<div class="about">
 			<h1><i class="fa fa-toggle-down"></i>About</h1>
 			<div class="text-about">
-				<p>Above numbers are the steps and stairs I walked yesterday (tracked by my Fitbit), as well as the keys I pressed and the mouseclicks I made (tracked by Whatpulse). If you see a boring <em>No</em> above, probably something went wrong. The graph shows the distribution of walked steps of the last nine days.<br/>
+				<p>Above numbers are some of yesterday's quantified statistics of my life. I call them <em>Quants</em>.<br/>
+				Steps and stairs are tracked with my Fitbit, mouse clicks and key presses are tracked with Whatpulse, the songs I listened to yesterday are imported from Lastfm. If you see a boring <em>No</em> above, probably something went wrong. The graph shows the distribution of walked steps of the last nine days.<br/>
 				This project is part of my <a href="http://www.andisblog.de/?s=quantified+self">Quantified Self studies</a>.
 				</p>
-				<p>The code to this project (including Fitbit-Api→SQLite-DB in Python as well as the PHP code running what you currently see) is <a href="https://github.com/AndiH/QuantifiedSelf/tree/master/Fitbit">available at Github</a>. Check it out. There's lots of other stuff there, partly in development.</p>
+				<p>The code to this project (both front-end and back-end) is <a href="https://github.com/AndiH/QuantifiedSelf/">available at Github</a>. Check it out. There's lots of other stuff there, partly in development.</p>
 			</div>
 	</div>
 
@@ -253,52 +222,123 @@ if (getGlow($lastFloors, $goalFloors)) $glowFloors = "text-shadow: 0px 0px 20px;
 
 	<script src="js/plugins.js"></script>
 	<script src="js/main.js"></script>
-	<script src="js/Chart.js"></script>
-	<script>
-		var chartData = {
-	 	labels : <?php echo $jsonHistoryDates ?>,
-		 	datasets : [{
-			 	fillColor : "rgba(220,220,220,0.5)",
-		        strokeColor : "rgba(220,220,220,1)",
-		        pointColor : "rgba(220,220,220,1)",
-		        pointStrokeColor : "#fff",
-		        data : <?php echo $jsonHistoryFloors ?>
-		 	},
-			{
-				fillColor : "rgba(151,187,205,0.5)",
-				strokeColor : "rgba(151,187,205,1)",
-				pointColor : "rgba(151,187,205,1)",
-				pointStrokeColor : "#fff",
-				data : <?php echo $jsonHistorySteps ?>
-			}]
-		}
-/* 		var myLine = new Chart(document.getElementById("graph").getContext("2d")).Line(chartData); */
+	
+	<script src="js/highcharts.js"></script>
+	<script src="js/modules/exporting.js"></script>
+
+	<script type="text/javascript">
+	var stepColor = '#75b1dc';
+	var floorColor = '#959cdc';
+	var chartData = {
+        chart: {
+        	type: 'spline',
+            zoomType: 'x',
+            spacingRight: 20
+        },
+        title: {
+/*                 text: 'Steps Walked' */
+			text: null
+        },
+/*
+        subtitle: {
+            text: 'During last nine days. Also: Floors.'
+        },
+*/
+        xAxis: {
+            categories: <?php echo $jsonHistoryDates ?>,
+        },
+        yAxis: [{
+            title: {
+                text: '# Steps',
+                style: {
+                	color: stepColor
+                }
+            },
+            labels: {
+	            style: {
+		            color: stepColor
+	            }
+            },
+            min: 0,
+            gridLineColor: '#eeeeee',
+            gridLineWidth: 1
+        }, {
+            title: {
+	            text: '# Floors',
+	            style: {
+		            color: floorColor
+	            }
+            },
+            labels: {
+	            style: {
+		            color: floorColor
+	            }
+            },
+            opposite: true,
+            min: 0,
+            gridLineWidth: null
+        }],
+        tooltip: {
+            enabled: true,
+        },
+		plotOptions: {
+			spline: {
+				marker: {
+					lineColor: '#FFFFFF',
+                    lineWidth: 1,
+				}
+			}
+		},
+        series: [{
+        	yAxis: 0,
+            name: 'Steps',
+            data: <?php echo $jsonHistorySteps ?>,
+            color: stepColor
+        }, {
+        	yAxis: 1,
+            name: 'Floors',
+            data: <?php echo $jsonHistoryFloors ?>,
+            color: floorColor
+        }],
+        
+        navigation: {
+            buttonOptions: {
+                symbolStroke: '#EEE'
+            }
+        },
+        legend: {
+	        borderColor: null
+        },
+        credits: {
+            enabled: false
+        }
+    };
 		
-		var firstRun = true;
-		$(".chart #history").click(function() {
-			if (firstRun) {
-				var myLine = new Chart($("#graph").get(0).getContext("2d")).Line(chartData);
-				firstRun = false;
-			} 
-			$("canvas").toggle("blind");
-			$('html, body').animate({ 
-					scrollTop: $(document).height()
-				}, 
-				1400, 
-				"easeOutQuint"
-			);
-			$(".chart i").toggleClass("fa-toggle-up fa-toggle-down");
-		});
-		$(".about h1").click(function() {
-			$(".text-about").toggle("blind");
-			$('html, body').animate({
-					scrollTop: $(document).height()
-				},
-				1400,
-				"easeOutQuint"
-			);
-			$(".about i").toggleClass("fa-toggle-up fa-toggle-down");
-		})
+	var firstRun = true;
+	$(".chart #history").click(function() {
+		if (firstRun) {
+			$('#graph').highcharts(chartData);
+			firstRun = false;
+		} 
+		$("#graph").toggle("blind");
+		$('html, body').animate({ 
+				scrollTop: $(document).height()
+			}, 
+			1400, 
+			"easeOutQuint"
+		);
+		$(".chart i").toggleClass("fa-toggle-up fa-toggle-down");
+	});
+	$(".about h1").click(function() {
+		$(".text-about").toggle("blind");
+		$('html, body').animate({
+				scrollTop: $(document).height()
+			},
+			1400,
+			"easeOutQuint"
+		);
+		$(".about i").toggleClass("fa-toggle-up fa-toggle-down");
+	})
 	</script>
 	
 </body>

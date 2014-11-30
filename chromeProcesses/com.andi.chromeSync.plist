@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.andi.chromeSync</string>
+	<key>WorkingDirectory</key>
+	<string>/Users/Andi/Documents/Coding/QuantifiedSelf/chromeProcesses/</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>-c</string>
+		<string>/usr/local/bin/python syncSqliteToMysql.py</string>
+	</array>
+	<key>StartInterval</key>
+	<integer>7200</integer>
+</dict>
+</plist>
