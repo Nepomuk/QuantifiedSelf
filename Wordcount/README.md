@@ -46,3 +46,10 @@ The database holds entries with four values:
 
 Every time the script is executed, all of those values will be filled in. In case a counting script fails, the default value '-1' will be inserted.
 
+
+## Known Issues
+
+  * The used document class might cause problems with texcount (sometimes it cannot find the used class).
+
+    Workaround: exclude the file which contains the document class command.
+
