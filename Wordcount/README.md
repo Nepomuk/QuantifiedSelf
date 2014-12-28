@@ -23,6 +23,15 @@ It basically contains two steps:
 The second step only works on OS X, so if you are using Linux use an entry in your crontab to call `wordcount.sh` instead.
 
 
+### File List
+
+Copy the sample file list:
+
+    cp file.list.sample file.list
+
+The file contains the list of files which should be checked (one per line) and needs to be adapted to your local setup. You may also use the wildcard * for selecting a bunch of files.
+
+
 ## Functional Description
 
 ### Database
@@ -33,7 +42,3 @@ The database holds entries with four values:
 
 Every time the script is executed, all of those values will be filled in. In case a counting script fails, the default value '-1' will be inserted.
 
-
-### File List
-
-The file `file.list` contains the list of files which should be checked. You may also use the wildcard * for selecting a bunch of files.
