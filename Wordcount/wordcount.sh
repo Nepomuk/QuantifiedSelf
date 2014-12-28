@@ -14,7 +14,7 @@ then
 fi
 
 # count with perl script
-PC_BIN="wordcount.pl"
+PC_BIN="latexcount.pl"
 PC_COUNT=-1
 if [ -e $PC_BIN ]
 then

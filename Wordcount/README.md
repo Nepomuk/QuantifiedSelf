@@ -9,18 +9,22 @@ The easiest way is to run the install script:
 
     ./install_wordcount.sh
 
-It basically contains two steps:
+It basically contains three steps:
 
   1. Create local SQLite3 database.
 
         ./wordcountDB.py init
 
-  2. Install a launch script to automatically run the wordcount script.
+  2. Get the perl script from [this site](http://ctan.mackichan.com/support/latexcount/latexcount.pl):
+
+        wget http://ctan.mackichan.com/support/latexcount/latexcount.pl
+
+  3. Install a launch script to automatically run the wordcount script.
 
         sed -e "s,\${PROG_PATH},$PWD," com.nepomuk.wordcount.plist > $HOME/Library/LaunchAgents/com.nepomuk.wordcount.plist
         launchctl load $HOME/Library/LaunchAgents/com.nepomuk.wordcount.plist
 
-The second step only works on OS X, so if you are using Linux use an entry in your crontab to call `wordcount.sh` instead.
+The last step only works on OS X, so if you are using Linux use an entry in your crontab to call `wordcount.sh` instead.
 
 
 ### File List

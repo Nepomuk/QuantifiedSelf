@@ -9,6 +9,11 @@ LAUNCHCTL_PLIST="com.nepomuk.wordcount.plist"
 /usr/bin/python $PY_WORDCOUNT init
 echo "Create database:      /usr/bin/python $PY_WORDCOUNT init"
 
+# get the perl script
+echo ""
+echo "Get latexcont.pl:"
+wget http://ctan.mackichan.com/support/latexcount/latexcount.pl
+
 # insert the launch file into the proper folder
 sed -e "s,\${PROG_PATH},$PWD," $LAUNCHCTL_PLIST > $LAUNCHCTL_AGENTS/$LAUNCHCTL_PLIST
 echo "Copy launch script and replace path."
