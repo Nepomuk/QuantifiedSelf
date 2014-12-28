@@ -1,8 +1,11 @@
 #!/bin/bash
 
+# current working directory
+CWD=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
 # get the files to scan
 INPUT_FILE="file.list"
-FILES=$(tr '\n' ' ' < $INPUT_FILE)
+FILES=$(tr '\n' ' ' < $CWD/$INPUT_FILE)
 
 # count with wordcount
 WC_BIN="/usr/bin/wc"
@@ -14,7 +17,7 @@ then
 fi
 
 # count with perl script
-PC_BIN="latexcount.pl"
+PC_BIN="$CWD/latexcount.pl"
 PC_COUNT=-1
 if [ -e $PC_BIN ]
 then
@@ -32,5 +35,6 @@ then
 fi
 
 # call the python script to insert values into the database
-PY_INSERT_SCRIPT="wordcountDB.py"
-/usr/bin/python $PY_INSERT_SCRIPT -ac $WC_COUNT $PC_COUNT $TC_COUNT insert
+PY_INSERT_SCRIPT="$CWD/wordcountDB.py"
+DATABASE="$CWD/wordcount.db"
+/usr/bin/python $PY_INSERT_SCRIPT -db $DATABASE -ac $WC_COUNT $PC_COUNT $TC_COUNT insert
