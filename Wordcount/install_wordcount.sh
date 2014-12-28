@@ -11,7 +11,7 @@ echo "Create database:      /usr/bin/python $PY_WORDCOUNT init"
 
 # get the perl script
 echo ""
-echo "Get latexcont.pl:"
+echo "Get latexcount.pl:"
 wget http://ctan.mackichan.com/support/latexcount/latexcount.pl
 
 # insert the launch file into the proper folder
