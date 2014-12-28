@@ -5,7 +5,6 @@ Access the wordcount database. Possible actions: init, insert.
 
 import sqlite3 as sql
 import os
-import itertools
 import time
 import argparse
 
@@ -80,4 +79,8 @@ if __name__ == "__main__":
     if ARGS.command == 'init':
         create_db(ARGS)
     elif ARGS.command == 'insert':
-        insert_into(ARGS)
+        if ARGS.ac == None or len(ARGS.ac) != 3:
+            print "ERROR: Too few arguments!"
+            print "Insert command needs three numbers as arguments of -ac (wc_count, pearl_count, tex_count)."
+        else:
+            insert_into(ARGS)
