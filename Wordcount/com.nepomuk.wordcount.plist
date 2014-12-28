@@ -23,9 +23,9 @@
   <true/>
 
   <key>StandardErrorPath</key>
-  <string>/tmp/QS_wordcount.err</string>
+  <string>/tmp/com.nepomuk.quantifiedself/wordcount.err</string>
 
   <key>StandardOutPath</key>
-  <string>/tmp/QS_wordcount.out</string>
+  <string>/tmp/com.nepomuk.quantifiedself/wordcount.out</string>
 </dict>
 </plist>
